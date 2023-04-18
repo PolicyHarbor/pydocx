@@ -45,3 +45,4 @@ main.py
 
 docs/_build
 tests/failures/*.html
+venv

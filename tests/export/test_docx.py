@@ -8,7 +8,7 @@ import base64
 import os
 from tempfile import NamedTemporaryFile
 
-from nose.tools import raises
+from pytest import raises
 
 from pydocx.exceptions import MalformedDocxException
 from pydocx.export.html import PyDocXHTMLExporter
@@ -59,10 +59,10 @@ class ConvertDocxToHtmlTestCase(DocXFixtureTestCaseFactory):
         'track_changes_on',
     )
 
-    @raises(MalformedDocxException)
     def test_raises_malformed_when_relationships_are_missing(self):
-        docx_path = self.get_path_to_fixture('missing_relationships.docx')
-        self.convert_docx_to_html(docx_path)
+        with self.assertRaises(MalformedDocxException):
+            docx_path = self.get_path_to_fixture('missing_relationships.docx')
+            self.convert_docx_to_html(docx_path)
 
     def test_unicode(self):
         docx_path = self.get_path_to_fixture('greek_alphabet.docx')
@@ -120,7 +120,7 @@ def test_has_image():
     assert_html_equal(actual_html, expected_html)
 
 
-@raises(MalformedDocxException)
 def test_malformed_docx_exception():
-    with NamedTemporaryFile(suffix='.docx') as f:
-        convert(f.name)
+    with raises(MalformedDocxException):
+        with NamedTemporaryFile(suffix='.docx') as f:
+            convert(f.name)
