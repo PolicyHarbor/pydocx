@@ -6,7 +6,7 @@ from __future__ import (
     unicode_literals,
 )
 
-from nose import SkipTest
+import pytest
 
 from pydocx.test import DocumentGeneratorTestCase
 from pydocx.test.utils import WordprocessingDocumentFactory
@@ -21,7 +21,7 @@ class XMLVulnerabilitiesTestCase(DocumentGeneratorTestCase):
             defusedxml = None
 
         if defusedxml is None:
-            raise SkipTest('This test case only applies when using defusedxml')
+            pytest.skip('This test case only applies when using defusedxml')
 
         document_xml = '''
             <p>
@@ -56,7 +56,7 @@ class XMLVulnerabilitiesTestCase(DocumentGeneratorTestCase):
             defusedxml = None
 
         if defusedxml is None:
-            raise SkipTest('This test case only applies when using defusedxml')
+            raise pytest.skip('This test case only applies when using defusedxml')
 
         document_xml = '''
             <p>
