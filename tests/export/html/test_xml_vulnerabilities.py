@@ -21,7 +21,7 @@ class XMLVulnerabilitiesTestCase(DocumentGeneratorTestCase):
             defusedxml = None
 
         if defusedxml is None:
-            return
+            pytest.skip('This test case only applies when using defusedxml')
 
         document_xml = '''
             <p>
