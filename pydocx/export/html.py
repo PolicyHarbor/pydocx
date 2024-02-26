@@ -360,12 +360,8 @@ class PyDocXHTMLExporter(PyDocXExporter):
                                                       include_text_indent=False):
         style = {}
 
-        if level_properties:
-            level_indentation_left = level_properties.to_int('indentation_left')
-            level_indentation_hanging = level_properties.to_int('indentation_hanging')
-        else:
-            level_indentation_left = 0
-            level_indentation_hanging = 0
+        level_indentation_left = level_properties.to_int('indentation_left')
+        level_indentation_hanging = level_properties.to_int('indentation_hanging')
 
         paragraph_indentation_left = paragraph_properties.to_int('indentation_left')
         paragraph_indentation_hanging = paragraph_properties.to_int('indentation_hanging')
@@ -375,7 +371,7 @@ class PyDocXHTMLExporter(PyDocXExporter):
         hanging = 0
 
         if paragraph_indentation_left is None and paragraph_indentation_hanging is None:
-            left = level_indentation_left - level_indentation_hanging
+            left = 0
             hanging = 0
         elif paragraph_indentation_left is None and paragraph_indentation_hanging is not None:
             left = level_indentation_left
@@ -807,8 +803,6 @@ class PyDocXHTMLExporter(PyDocXExporter):
 
         if numbering_item.children:
             level_properties = numbering_item.numbering_span.numbering_level.paragraph_properties
-            # get the first paragraph properties with will contain information on how to properly
-            # indent listing item
             paragraph_properties = numbering_item.children[0].properties
 
             style = self.export_listing_paragraph_property_indentation(paragraph_properties,
