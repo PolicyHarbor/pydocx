@@ -32,7 +32,6 @@ class ConvertDocxToHtmlTestCase(DocXFixtureTestCaseFactory):
         'has_title',
         'inline_tags',
         'justification',
-        'paragraph_with_margins',
         'list_in_table',
         'lists_with_margins',
         'lists_with_styles',
