@@ -271,7 +271,10 @@ class PyDocXHTMLExporter(PyDocXExporter):
             self.default_heading_level,
         )
         if paragraph.bookmark_name:
-            return HtmlTag(tag, id=paragraph.bookmark_name)
+            attrs = {
+                'id': paragraph.bookmark_name
+            }
+            return HtmlTag(tag, **attrs)
         return HtmlTag(tag)
 
     def export_paragraph(self, paragraph):
