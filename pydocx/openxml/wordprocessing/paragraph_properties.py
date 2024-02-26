@@ -43,11 +43,3 @@ class ParagraphProperties(XmlModel):
         if start_margin:
             return start_margin
         return 0
-
-    def to_int(self, attribute):
-        # TODO would be nice if this integer conversion was handled
-        # implicitly by the model somehow
-        try:
-            return int(getattr(self, attribute, None))
-        except (ValueError, TypeError):
-            return None
