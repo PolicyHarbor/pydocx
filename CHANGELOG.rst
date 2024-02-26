@@ -1,7 +1,3 @@
-**dev**
-
-- Internal links and anchors are now retained. Thanks, sunu! `#222 <https://github.com/CenterForOpenScience/pydocx/pull/222>`_
-
 **0.9.10**
 
 - No longer error when processing margin positions with decimal points.

@@ -461,29 +461,27 @@ class MangledIlvlTestCase(TranslationTestCase):
         return xml
 
 
-class SeperateListsIntoParentListTestCase(TranslationTestCase):
+class SeperateListsTestCase(TranslationTestCase):
     expected_output = '''
         <ol class="pydocx-list-style-type-lowerLetter">
-            <li>
-                AAA
-                <ol class="pydocx-list-style-type-decimal">
-                    <li>BBB</li>
-                    <li>CCC</li>
-                </ol>
-            </li>
-            <li>DDD</li>
+            <li>AAA</li>
+        </ol>
+        <ol class="pydocx-list-style-type-decimal">
+            <li>BBB</li>
+        </ol>
+        <ol class="pydocx-list-style-type-lowerLetter">
+            <li>CCC</li>
         </ol>
     '''
 
     def get_xml(self):
         tags = [
             DXB.li(text='AAA', ilvl=0, numId=2),
-            # Because AAA and DDD are part of the same list (same list id)
-            # and BBB,CCC are different, these need to be properly formatted
-            # into a single list where BBB,CCC are added as nested list to AAA item
+            # Because AAA and CCC are part of the same list (same list id)
+            # and BBB is different, these need to be split into three
+            # lists (or lose everything from BBB and after.
             DXB.li(text='BBB', ilvl=0, numId=1),
-            DXB.li(text='CCC', ilvl=0, numId=1),
-            DXB.li(text='DDD', ilvl=0, numId=2),
+            DXB.li(text='CCC', ilvl=0, numId=2),
         ]
         body = b''
         for el in tags:

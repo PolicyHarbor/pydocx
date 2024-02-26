@@ -17,7 +17,7 @@ from pydocx.constants import (
     POINTS_PER_EM,
     PYDOCX_STYLES,
     TWIPS_PER_POINT,
-    EMUS_PER_PIXEL
+    EMUS_PER_PIXEL,
 )
 from pydocx.export.base import PyDocXExporter
 from pydocx.export.numbering_span import NumberingItem
@@ -96,12 +96,12 @@ class HtmlTag(object):
     closed_tag_format = '</{tag}>'
 
     def __init__(
-            self,
-            tag,
-            allow_self_closing=False,
-            closed=False,
-            allow_whitespace=False,
-            **attrs
+        self,
+        tag,
+        allow_self_closing=False,
+        closed=False,
+        allow_whitespace=False,
+        **attrs
     ):
         self.tag = tag
         self.allow_self_closing = allow_self_closing
@@ -270,8 +270,6 @@ class PyDocXHTMLExporter(PyDocXExporter):
             heading_style.name.lower(),
             self.default_heading_level,
         )
-        if paragraph.bookmark_name:
-            return HtmlTag(tag, id=paragraph.bookmark_name)
         return HtmlTag(tag)
 
     def export_paragraph(self, paragraph):
@@ -311,45 +309,46 @@ class PyDocXHTMLExporter(PyDocXExporter):
     def export_paragraph_property_indentation(self, paragraph, results):
         # TODO these classes should be applied on the paragraph, and not as
         # inline styles
-
         properties = paragraph.effective_properties
 
         style = {}
 
-        # Numbering properties can define a text indentation on a paragraph
-        if properties.numbering_properties:
-            indentation_left = None
-            indentation_first_line = None
+        if properties.indentation_right:
+            # TODO would be nice if this integer conversion was handled
+            # implicitly by the model somehow
+            try:
+                right = int(properties.indentation_right)
+            except ValueError:
+                right = None
 
-            paragraph_num_level = paragraph.get_numbering_level()
+            if right:
+                right = convert_twips_to_ems(right)
+                style['margin-right'] = '{0:.2f}em'.format(right)
 
-            if paragraph_num_level:
-                listing_style = self.export_listing_paragraph_property_indentation(
-                    paragraph,
-                    paragraph_num_level.paragraph_properties,
-                    include_text_indent=True
-                )
-                if 'text-indent' in listing_style and listing_style['text-indent'] != '0.00em':
-                    style['text-indent'] = listing_style['text-indent']
-                    style['display'] = 'inline-block'
-        else:
-            indentation_left = properties.to_int('indentation_left')
-            indentation_first_line = properties.to_int('indentation_first_line')
+        if properties.indentation_left:
+            # TODO would be nice if this integer conversion was handled
+            # implicitly by the model somehow
+            try:
+                left = int(properties.indentation_left)
+            except ValueError:
+                left = None
 
-        indentation_right = properties.to_int('indentation_right')
+            if left:
+                left = convert_twips_to_ems(left)
+                style['margin-left'] = '{0:.2f}em'.format(left)
 
-        if indentation_right:
-            right = convert_twips_to_ems(indentation_right)
-            style['margin-right'] = '{0:.2f}em'.format(right)
+        if properties.indentation_first_line:
+            # TODO would be nice if this integer conversion was handled
+            # implicitly by the model somehow
+            try:
+                first_line = int(properties.indentation_first_line)
+            except ValueError:
+                first_line = None
 
-        if indentation_left:
-            left = convert_twips_to_ems(indentation_left)
-            style['margin-left'] = '{0:.2f}em'.format(left)
-
-        if indentation_first_line:
-            first_line = convert_twips_to_ems(indentation_first_line)
-            style['text-indent'] = '{0:.2f}em'.format(first_line)
-            style['display'] = 'inline-block'
+            if first_line:
+                first_line = convert_twips_to_ems(first_line)
+                # TODO text-indent doesn't work with inline elements like span
+                style['text-indent'] = '{0:.2f}em'.format(first_line)
 
         if style:
             attrs = {
@@ -359,93 +358,6 @@ class PyDocXHTMLExporter(PyDocXExporter):
             results = tag.apply(results, allow_empty=False)
 
         return results
-
-    def export_listing_paragraph_property_indentation(
-            self,
-            paragraph,
-            level_properties,
-            include_text_indent=False
-    ):
-        style = {}
-
-        if not level_properties or not paragraph.has_numbering_properties:
-            return style
-
-        level_indentation_step = \
-            paragraph.numbering_definition.get_indentation_between_levels()
-
-        paragraph_properties = paragraph.properties
-
-        level_ind_left = level_properties.to_int('indentation_left', default=0)
-        level_ind_hanging = level_properties.to_int('indentation_hanging', default=0)
-
-        paragraph_ind_left = paragraph_properties.to_int('indentation_left', default=0)
-        paragraph_ind_hanging = paragraph_properties.to_int('indentation_hanging', default=0)
-        paragraph_ind_first_line = paragraph_properties.to_int('indentation_first_line',
-                                                               default=0)
-
-        left = paragraph_ind_left or level_ind_left
-        hanging = paragraph_ind_hanging or level_ind_hanging
-        # At this point we have no info about indentation, so we keep the default one
-        if not left and not hanging:
-            return style
-
-        # All the bellow left margin calculation is done because html ul/ol/li elements have
-        # their default indentations and we need to make sure that we migrate as near as
-        # possible solution to html.
-        margin_left = left
-
-        # Because hanging can be set independently, we remove it from left margin and will
-        # be added as text-indent later on
-        margin_left -= hanging
-
-        # Take into account that current span can have custom left margin
-        if level_indentation_step > level_ind_hanging:
-            margin_left -= (level_indentation_step - level_ind_hanging)
-        else:
-            margin_left -= level_indentation_step
-
-        # First line are added to left margins
-        margin_left += paragraph_ind_first_line
-
-        if isinstance(paragraph.parent, NumberingItem):
-            try:
-                # In case of nested lists elements, we need to adjust left margin
-                # based on the parent item
-                parent_paragraph = paragraph.parent.numbering_span.parent.get_first_child()
-
-                parent_ind_left = parent_paragraph.get_indentation('indentation_left')
-                parent_ind_hanging = parent_paragraph.get_indentation('indentation_hanging')
-                parent_lvl_ind_hanging = parent_paragraph.get_indentation(
-                    'indentation_hanging')
-
-                margin_left -= (parent_ind_left - parent_ind_hanging)
-                margin_left -= parent_lvl_ind_hanging
-                # To mimic the word way of setting first line, we need to move back(left) all
-                # elements by first_line value
-                margin_left -= parent_paragraph.get_indentation('indentation_first_line')
-            except AttributeError:
-                pass
-
-        # Here as well, we remove the default hanging which word adds
-        # because <li> tag will provide it's own
-        hanging -= level_ind_hanging
-
-        if margin_left:
-            margin_left = convert_twips_to_ems(margin_left)
-            style['margin-left'] = '{0:.2f}em'.format(margin_left)
-
-        # we don't allow negative hanging
-        if hanging < 0:
-            hanging = 0
-
-        if include_text_indent:
-            if hanging is not None:
-                # Now, here we add the hanging as text-indent for the paragraph
-                hanging = convert_twips_to_ems(hanging)
-                style['text-indent'] = '{0:.2f}em'.format(hanging)
-
-        return style
 
     def get_run_styles_to_apply(self, run):
         parent_paragraph = run.get_first_ancestor(wordprocessing.Paragraph)
@@ -595,10 +507,7 @@ class PyDocXHTMLExporter(PyDocXExporter):
 
     def export_hyperlink(self, hyperlink):
         results = super(PyDocXHTMLExporter, self).export_hyperlink(hyperlink)
-        if not hyperlink.target_uri and hyperlink.anchor:
-            tag = self.get_hyperlink_tag(target_uri='#' + hyperlink.anchor)
-        else:
-            tag = self.get_hyperlink_tag(target_uri=hyperlink.target_uri)
+        tag = self.get_hyperlink_tag(target_uri=hyperlink.target_uri)
         if tag:
             results = tag.apply(results, allow_empty=False)
 
@@ -823,25 +732,7 @@ class PyDocXHTMLExporter(PyDocXExporter):
             numbering_item.children,
             self.export_node,
         )
-
-        style = None
-
-        if numbering_item.children:
-            level_properties = numbering_item.numbering_span.\
-                numbering_level.paragraph_properties
-            # get the first paragraph properties which will contain information
-            # on how to properly indent listing item
-            paragraph = numbering_item.children[0]
-
-            style = self.export_listing_paragraph_property_indentation(paragraph,
-                                                                       level_properties)
-
-        attrs = {}
-
-        if style:
-            attrs['style'] = convert_dictionary_to_style_fragment(style)
-
-        tag = HtmlTag('li', **attrs)
+        tag = HtmlTag('li')
         return tag.apply(results)
 
     def export_field_hyperlink(self, simple_field, field_args):
