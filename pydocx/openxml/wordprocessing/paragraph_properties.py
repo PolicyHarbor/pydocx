@@ -44,10 +44,10 @@ class ParagraphProperties(XmlModel):
             return start_margin
         return 0
 
-    def to_int(self, attribute, default=None):
+    def to_int(self, attribute):
         # TODO would be nice if this integer conversion was handled
         # implicitly by the model somehow
         try:
-            return int(getattr(self, attribute, default))
+            return int(getattr(self, attribute, None))
         except (ValueError, TypeError):
-            return default
+            return None

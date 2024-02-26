@@ -17,7 +17,7 @@ from pydocx.constants import (
     POINTS_PER_EM,
     PYDOCX_STYLES,
     TWIPS_PER_POINT,
-    EMUS_PER_PIXEL
+    EMUS_PER_PIXEL,
 )
 from pydocx.export.base import PyDocXExporter
 from pydocx.export.numbering_span import NumberingItem
@@ -323,17 +323,14 @@ class PyDocXHTMLExporter(PyDocXExporter):
             indentation_left = None
             indentation_first_line = None
 
-            paragraph_num_level = paragraph.get_numbering_level()
-
-            if paragraph_num_level:
-                listing_style = self.export_listing_paragraph_property_indentation(
-                    paragraph,
-                    paragraph_num_level.paragraph_properties,
-                    include_text_indent=True
-                )
-                if 'text-indent' in listing_style and listing_style['text-indent'] != '0.00em':
-                    style['text-indent'] = listing_style['text-indent']
-                    style['display'] = 'inline-block'
+            listing_style = self.export_listing_paragraph_property_indentation(
+                properties,
+                paragraph.get_numbering_level().paragraph_properties,
+                include_text_indent=True
+            )
+            if 'text-indent' in listing_style and listing_style['text-indent'] != '0.00em':
+                style['text-indent'] = listing_style['text-indent']
+                style['display'] = 'inline-block'
 
         indentation_right = properties.to_int('indentation_right')
 
@@ -359,96 +356,58 @@ class PyDocXHTMLExporter(PyDocXExporter):
 
         return results
 
-    def get_previous_level_paragraph(self, num_id, level_id):
-        level_id = int(level_id)
-
-        while True:
-            if level_id == 0:
-                prev_level_id = level_id
-            else:
-                prev_level_id = level_id - 1
-
-            prev_level_paragraphs = self.numbering_level_listing_track[num_id][prev_level_id]
-            if prev_level_paragraphs:
-                return prev_level_paragraphs[-1]
-
-            if prev_level_id == 0 and not prev_level_paragraphs:
-                # this is an ege case with older version of word when it may contain a sublist
-                # into a separate num_id.
-                break
-
-            level_id -= 1
-
-        return None
-
-    def export_listing_paragraph_property_indentation(self, paragraph, level_properties,
+    def export_listing_paragraph_property_indentation(self, paragraph_properties, level_properties,
                                                       include_text_indent=False):
         style = {}
 
-        if not level_properties or not paragraph.has_numbering_properties:
-            return style
+        if level_properties:
+            level_indentation_left = level_properties.to_int('indentation_left')
+            level_indentation_hanging = level_properties.to_int('indentation_hanging')
+        else:
+            level_indentation_left = 0
+            level_indentation_hanging = 0
 
-        default_level_indentation = paragraph.get_numbering_default_level_indentation()
+        paragraph_indentation_left = paragraph_properties.to_int('indentation_left')
+        paragraph_indentation_hanging = paragraph_properties.to_int('indentation_hanging')
+        paragraph_indentation_first_line = paragraph_properties.to_int('indentation_first_line')
 
-        paragraph_properties = paragraph.properties
+        left = 0
+        hanging = 0
 
-        level_id = int(paragraph_properties.numbering_properties.level_id)
-        num_id = paragraph_properties.numbering_properties.num_id
+        if paragraph_indentation_left is None and paragraph_indentation_hanging is None:
+            left = level_indentation_left - level_indentation_hanging
+            hanging = 0
+        elif paragraph_indentation_left is None and paragraph_indentation_hanging is not None:
+            left = level_indentation_left
 
-        level_ind_left = level_properties.to_int('indentation_left', default=0)
-        level_ind_hanging = level_properties.to_int('indentation_hanging', default=0)
+            hanging = paragraph_indentation_hanging
+            hanging -= level_indentation_hanging
 
-        paragraph_ind_left = paragraph_properties.to_int('indentation_left', default=0)
-        paragraph_ind_hanging = paragraph_properties.to_int('indentation_hanging', default=0)
-        paragraph_ind_first_line = paragraph_properties.to_int('indentation_first_line',
-                                                               default=0)
+            left -= level_indentation_hanging
+            left -= paragraph_indentation_hanging
 
-        left = paragraph_ind_left or level_ind_left
-        hanging = paragraph_ind_hanging or level_ind_hanging
+        elif paragraph_indentation_left is not None and paragraph_indentation_hanging is None:
+            left = paragraph_indentation_left - level_indentation_hanging
+            hanging = 0
 
-        # at this point we have no info about indentation, so we keep the default one
-        if not left and not hanging:
-            return style
+        elif paragraph_indentation_left is not None and paragraph_indentation_hanging is not None:
+            left = paragraph_indentation_left
+            hanging = paragraph_indentation_hanging
 
-        if num_id not in self.numbering_level_listing_track:
-            # by default there are only 9 numbering levels in docx(0 indexed)
-            self.numbering_level_listing_track[num_id] = [[] for _ in range(10)]
-        if paragraph not in self.numbering_level_listing_track[num_id][level_id]:
-            self.numbering_level_listing_track[num_id][level_id].append(paragraph)
+            left -= hanging
 
-        # by default left contains hanging as well, so we remove it
-        left -= hanging
-
-        if level_id == 0:
-            # because html ul/ol/li elements have there default indentations
-            # we remove the default word one as well
-            # this way we will have as near as possible migration to html
-            left -= (default_level_indentation['left'] - level_ind_hanging)
-
-            # first line are added left margins
-            if paragraph_ind_first_line:
-                left += paragraph_ind_first_line
-
-        if level_id > 0:
-            # for nested levels we need to add indentation based on parent level
-            prev_paragraph = self.get_previous_level_paragraph(num_id, level_id)
-            if prev_paragraph:
-                prev_left_level_indentation = prev_paragraph.get_numbering_level().\
-                    paragraph_properties.to_int('indentation_left')
-                left -= (prev_left_level_indentation - level_ind_hanging)
+            if paragraph_indentation_left > level_indentation_left:
+                # this mean that 'left' include also the listing indentation
+                # we remove the default listing indentations because html ul/ol/li does add it's own
+                left -= (level_indentation_left - level_indentation_hanging)
             else:
-                # there are edge cases when we have a level > 0 for specific num_id but no
-                # actual level=0 for this num_id. in such cases we just do the default
-                # indentation
-                left -= level_ind_hanging
+                left -= level_indentation_hanging
 
-            # because lists add there own nested level indentation we subtract it here
-            # and the remaining part will be the actual needed indentation
-            left -= default_level_indentation['level_indentation_step']
+            hanging -= level_indentation_hanging
 
-        # here we well, we remove the default hanging which word adds
-        # because <li> tag will provide it's own
-        hanging -= level_ind_hanging
+        # first line is added as left margin
+        if paragraph_indentation_first_line is not None:
+            left += paragraph_indentation_first_line
 
         if left:
             left = convert_twips_to_ems(left)
@@ -847,13 +806,12 @@ class PyDocXHTMLExporter(PyDocXExporter):
         style = None
 
         if numbering_item.children:
-            level_properties = numbering_item.numbering_span.\
-                numbering_level.paragraph_properties
-            # get the first paragraph properties which will contain information
-            # on how to properly indent listing item
-            paragraph = numbering_item.children[0]
+            level_properties = numbering_item.numbering_span.numbering_level.paragraph_properties
+            # get the first paragraph properties with will contain information on how to properly
+            # indent listing item
+            paragraph_properties = numbering_item.children[0].properties
 
-            style = self.export_listing_paragraph_property_indentation(paragraph,
+            style = self.export_listing_paragraph_property_indentation(paragraph_properties,
                                                                        level_properties)
 
         attrs = {}

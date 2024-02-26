@@ -32,7 +32,6 @@ class PyDocXExporter(object):
 
         self.captured_runs = None
         self.complex_field_runs = []
-        self.numbering_level_listing_track = {}
 
         self.node_type_to_export_func_map = {
             wordprocessing.Document: self.export_document,
