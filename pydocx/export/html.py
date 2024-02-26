@@ -270,11 +270,6 @@ class PyDocXHTMLExporter(PyDocXExporter):
             heading_style.name.lower(),
             self.default_heading_level,
         )
-        if paragraph.bookmark_name:
-            attrs = {
-                'id': paragraph.bookmark_name
-            }
-            return HtmlTag(tag, **attrs)
         return HtmlTag(tag)
 
     def export_paragraph(self, paragraph):
@@ -512,10 +507,7 @@ class PyDocXHTMLExporter(PyDocXExporter):
 
     def export_hyperlink(self, hyperlink):
         results = super(PyDocXHTMLExporter, self).export_hyperlink(hyperlink)
-        if hyperlink.target_uri:
-            tag = self.get_hyperlink_tag(target_uri=hyperlink.target_uri)
-        else:
-            tag = self.get_hyperlink_tag(target_uri='#' + hyperlink.anchor)
+        tag = self.get_hyperlink_tag(target_uri=hyperlink.target_uri)
         if tag:
             results = tag.apply(results, allow_empty=False)
 

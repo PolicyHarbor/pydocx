@@ -16,7 +16,6 @@ from pydocx.openxml.wordprocessing.inserted_run import InsertedRun
 from pydocx.openxml.wordprocessing.deleted_run import DeletedRun
 from pydocx.openxml.wordprocessing.sdt_run import SdtRun
 from pydocx.openxml.wordprocessing.simple_field import SimpleField
-from pydocx.openxml.wordprocessing.bookmark import Bookmark
 
 
 class Paragraph(XmlModel):
@@ -32,7 +31,6 @@ class Paragraph(XmlModel):
         DeletedRun,
         SdtRun,
         SimpleField,
-        Bookmark
     )
 
     def __init__(self, **kwargs):
@@ -122,12 +120,6 @@ class Paragraph(XmlModel):
         for p_child in self.children:
             if isinstance(p_child, Run):
                 yield p_child
-
-    @property
-    def bookmark_name(self):
-        for p_child in self.children:
-            if isinstance(p_child, Bookmark):
-                return p_child.name
 
     def get_text(self, tab_char=None):
         '''
