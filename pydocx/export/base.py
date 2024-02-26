@@ -32,6 +32,7 @@ class PyDocXExporter(object):
 
         self.captured_runs = None
         self.complex_field_runs = []
+        self.numbering_level_listing_track = {}
 
         self.node_type_to_export_func_map = {
             wordprocessing.Document: self.export_document,
@@ -286,7 +287,7 @@ class PyDocXExporter(object):
             for item in items:
                 yield item
             return
-        builder = self.numbering_span_builder_class(items, process_components=True)
+        builder = self.numbering_span_builder_class(items)
         numbering_spans = builder.get_numbering_spans()
         for item in numbering_spans:
             yield item

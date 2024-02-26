@@ -381,9 +381,6 @@ class RemoveInitialTabCharsFromParagraphTestCase(NumberingSpanTestBase):
 
 
 class DetectParentChildMapTestCase(NumberingSpanTestBase):
-    def setUp(self):
-        pass
-
     def assertDictEqual(self, d1, d2, msg=None):
         if sys.version_info >= (2, 7):
             super(DetectParentChildMapTestCase, self).assertDictEqual(d1, d2, msg=msg)
@@ -467,11 +464,9 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
 
     def test_no_components_on_init(self):
         builder = NumberingSpanBuilder()
-        result = builder.detect_parent_child_map_for_items()
-
         self.assertEqual(builder.child_parent_num_map, {})
         self.assertEqual(builder.parent_child_num_map, {})
-        self.assertFalse(result)
+        self.assertFalse(builder.detect_parent_child_map_for_items())
 
     def test_invalid_input_components(self):
         components = [
@@ -493,11 +488,9 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         ]
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
-
         self.assertEqual(builder.parent_child_num_map, {})
         self.assertEqual(builder.child_parent_num_map, {})
-        self.assertFalse(result)
+        self.assertFalse(builder.detect_parent_child_map_for_items())
 
     def test_valid_input_components_but_no_sublists_found(self):
         components = [
@@ -517,12 +510,10 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         }
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
-
-        self.assertDictEqual(builder.parent_child_num_map, {})
-        self.assertDictEqual(builder.child_parent_num_map, {})
-        self.assertDictEqual(builder.list_start_stop_index, list_start_stop_index)
-        self.assertTrue(result)
+        self.assertEqual(builder.parent_child_num_map, {})
+        self.assertEqual(builder.child_parent_num_map, {})
+        self.assertEqual(builder.list_start_stop_index, list_start_stop_index)
+        self.assertTrue(builder.detect_parent_child_map_for_items())
 
     def test_sublist_found(self):
         components = [
@@ -534,8 +525,6 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         ]
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
-
         parent_items = {
             ('1', '0'):
                 [
@@ -554,7 +543,7 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         self.assertDictEqual(builder.parent_child_num_map, parent_items)
         self.assertDictEqual(builder.child_parent_num_map, child_item)
         self.assertEqual(builder.list_start_stop_index, list_start_stop_index)
-        self.assertTrue(result)
+        self.assertTrue(builder.detect_parent_child_map_for_items())
 
     def test_nested_sublist_found(self):
         components = [
@@ -567,7 +556,6 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         ]
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
 
         parent_items = {
             ('1', '0'):
@@ -594,7 +582,7 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         self.assertDictEqual(builder.parent_child_num_map, parent_items)
         self.assertDictEqual(builder.child_parent_num_map, child_item)
         self.assertDictEqual(builder.list_start_stop_index, list_start_stop_index)
-        self.assertTrue(result)
+        self.assertTrue(builder.detect_parent_child_map_for_items())
 
     def test_nested_sublist_not_wrapped_in_parent_item(self):
         components = [
@@ -606,7 +594,6 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         ]
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
 
         parent_items = {
             ('1', '0'):
@@ -629,7 +616,7 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         self.assertDictEqual(builder.parent_child_num_map, parent_items)
         self.assertDictEqual(builder.child_parent_num_map, child_item)
         self.assertDictEqual(builder.list_start_stop_index, list_start_stop_index)
-        self.assertTrue(result)
+        self.assertTrue(builder.detect_parent_child_map_for_items())
 
     def test_nested_sublist_parent_with_different_level(self):
         components = [
@@ -648,7 +635,6 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         ]
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
 
         parent_items = {
             ('1', '0'):
@@ -679,7 +665,7 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         self.assertDictEqual(builder.parent_child_num_map, parent_items)
         self.assertDictEqual(builder.child_parent_num_map, child_item)
         self.assertDictEqual(builder.list_start_stop_index, list_start_stop_index)
-        self.assertTrue(result)
+        self.assertTrue(builder.detect_parent_child_map_for_items())
 
     def test_nested_sublist_multiple_levels(self):
         components = [
@@ -695,7 +681,6 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
         ]
 
         builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
 
         parent_items = {
             ('1', '0'):
@@ -728,31 +713,4 @@ class DetectParentChildMapTestCase(NumberingSpanTestBase):
 
         self.assertDictEqual(builder.parent_child_num_map, parent_items)
         self.assertDictEqual(builder.child_parent_num_map, child_item)
-        self.assertTrue(result)
-
-    def test_nested_sublist_parent_contains_child_and_child_parent(self):
-        components = [
-            self.create_numbering_paragraph('1', '0'),
-            self.create_numbering_paragraph('2', '1'),
-            self.create_numbering_paragraph('2', '1'),
-            self.create_numbering_paragraph('1', '0'),
-            self.create_numbering_paragraph('2', '1'),
-            self.create_numbering_paragraph('2', '2'),
-        ]
-
-        builder = NumberingSpanBuilder(components)
-        result = builder.detect_parent_child_map_for_items()
-
-        parent_items = {
-            ('1', '0'):
-                [
-                    {'num_id': '2', 'level': '1'},
-                ]
-        }
-        child_item = {
-            '2': {'num_id': '1', 'level': '0'},
-        }
-
-        self.assertDictEqual(builder.parent_child_num_map, parent_items)
-        self.assertDictEqual(builder.child_parent_num_map, child_item)
-        self.assertTrue(result)
+        self.assertTrue(builder.detect_parent_child_map_for_items())

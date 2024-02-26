@@ -138,7 +138,6 @@ class NumberingSpan(object):
 
     def __init__(self, numbering_level, numbering_definition, parent):
         self.children = []
-        self._nested_level = 0
         # Mark a separate nested list
         self.is_separate_list = False
         self.numbering_level = numbering_level
@@ -167,17 +166,6 @@ class NumberingSpan(object):
     def get_numbering_level(self):
         return self.numbering_level
 
-    @property
-    def nested_level(self):
-        return self._nested_level
-
-    def inc_nested_level(self):
-        nested_level = 0
-        if isinstance(self.parent, (NumberingSpan, NumberingItem)):
-            nested_level = self.parent.nested_level
-
-        self._nested_level = nested_level + 1
-
 
 class NumberingItem(object):
     '''
@@ -196,16 +184,6 @@ class NumberingItem(object):
         child.parent = self
         self.children.append(child)
 
-    @property
-    def nested_level(self):
-        return self.parent.nested_level
-
-    def get_first_child(self):
-        if self.children:
-            return self.children[0]
-
-        return None
-
 
 class BaseNumberingSpanBuilder(object):
     '''
@@ -221,7 +199,7 @@ class BaseNumberingSpanBuilder(object):
     accomplished using the NumberingSpan and NumberingItem classes.
     '''
 
-    def __init__(self, components=None, process_components=False):
+    def __init__(self, components=None):
         if not components:
             components = []
         self.components = components
@@ -234,8 +212,7 @@ class BaseNumberingSpanBuilder(object):
         self.parent_child_num_map = {}
         self.list_start_stop_index = {}
 
-        if process_components:
-            self.detect_parent_child_map_for_items()
+        self.detect_parent_child_map_for_items()
 
     @memoized
     def get_numbering_level(self, paragraph):
@@ -293,6 +270,7 @@ class BaseNumberingSpanBuilder(object):
         parent_child_map = {}
         child_parent_map = {}
         list_start_stop_index = {}
+
         # we are interested only in components that are part of the listing
         components = [component for component in self.components if
                       hasattr(component, 'properties')
@@ -302,17 +280,14 @@ class BaseNumberingSpanBuilder(object):
         if not components:
             return False
 
-        components_reversed_list = list(reversed(components))
-        for i, component in enumerate(components[:-1]):
+        components_reversed = list(reversed(components))
+
+        for i, component in enumerate(components):
             parent_item = self._get_component_item(component)
+
             nums = []
             outer_item_found = False
-            if i > 0:
-                components_reversed = components_reversed_list[:-i]
-            else:
-                components_reversed = components_reversed_list
-
-            for j, next_component in enumerate(components_reversed):
+            for j, next_component in enumerate(components_reversed[:-1]):
                 next_item = self._get_component_item(next_component)
                 if parent_item == next_item:
                     outer_item_found = True
@@ -325,17 +300,12 @@ class BaseNumberingSpanBuilder(object):
                             'stop': self.components.index(next_component)
                         }
                     break
+
             if outer_item_found:
                 for _component in components[i + 1:-j - 1]:
                     child_item = self._get_component_item(_component)
-                    # We need to process only items that have different num_id
-                    # which mean are part of the different list
                     if child_item['num_id'] != parent_item['num_id']:
-                        # Check if child is not already a parent
-                        child_item_children = parent_child_map.get(
-                            (child_item['num_id'], child_item['level']), [])
-                        if parent_item not in child_item_children:
-                            nums.append(child_item)
+                        nums.append(child_item)
                 if nums:
                     # parent_key = parent_item['num_id']
                     parent_key = (parent_item['num_id'], parent_item['level'])
@@ -507,8 +477,6 @@ class BaseNumberingSpanBuilder(object):
         self.current_span = next_numbering_span
         self.current_item = next_numbering_item
         self.current_item_index = index
-
-        self.current_span.inc_nested_level()
 
     def add_new_span_and_item_lower_level(self, index, level, previous_span=None):
         num_def = level.parent
